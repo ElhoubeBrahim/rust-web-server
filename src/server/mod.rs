@@ -41,7 +41,7 @@ impl Server {
             // Handle the incoming request
             let mut request = Request::new();
             request.parse(buffer.as_str());
-            request.handle();
+            request.handle(&mut stream);
         }
     }
 }

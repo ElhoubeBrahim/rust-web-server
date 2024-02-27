@@ -1,11 +1,101 @@
-pub struct Response {}
+use std::{collections::HashMap, fs, io::Error};
 
-impl Response {
-    pub fn new() -> Response {
-        Response {}
+use super::request::Request;
+
+pub struct Response<'a> {
+    request: &'a Request,
+    status_code: u16,
+    headers: HashMap<String, String>,
+    body: String,
+}
+
+impl<'a> Response<'a> {
+    pub fn new(request: &'a Request) -> Response<'a> {
+        Response {
+            request,
+            status_code: 200,
+            headers: HashMap::new(),
+            body: String::from(""),
+        }
     }
 
-    pub fn send(&self) {
-        todo!("Send response");
+    pub fn prepare(&mut self) -> String {
+        let path = self.request.uri().path;
+        match self.get_file_content(path) {
+            Ok(content) => {
+                self.body = content;
+                self.get_raw()
+            }
+            Err(_) => {
+                self.status_code = 404;
+                self.body = self.get_file_content("404.html".to_string()).unwrap();
+                self.get_raw()
+            }
+        }
+    }
+
+    fn get_raw(&mut self) -> String {
+        // Set the response headers
+        self.headers
+            .insert(String::from("Content-Type"), String::from("text/html"));
+        self.headers
+            .insert(String::from("Server"), String::from("Rust Server"));
+        self.headers
+            .insert(String::from("Content-Length"), self.body.len().to_string());
+
+        // Send the response
+        let response = format!(
+            "{} {} {}\r\n{}\r\n\r\n{}",
+            self.request.version().as_str(),
+            self.status_code,
+            self.status_text(),
+            self.headers(),
+            self.body
+        );
+
+        response
+    }
+
+    fn get_file_content(&self, path: String) -> Result<String, Error> {
+        let full_path = self.build_file_path(path);
+
+        // Read the file content
+        let content = fs::read_to_string(full_path)?;
+        Ok(content)
+    }
+
+    fn build_file_path(&self, path: String) -> String {
+        let mut full_path = format!("public/{}", &path).to_string();
+
+        // Check if file exists
+        let metadata = fs::metadata(&full_path);
+        if metadata.is_err() || metadata.unwrap().is_dir() {
+            full_path = if path.is_empty() {
+                "public/index.html".to_string()
+            } else {
+                format!("public/{}/index.html", &path)
+            }
+        }
+
+        full_path
+    }
+
+    fn status_text(&self) -> String {
+        match self.status_code {
+            200 => String::from("OK"),
+            404 => String::from("Not Found"),
+            500 => String::from("Internal Server Error"),
+            _ => String::from("OK"),
+        }
+    }
+
+    fn headers(&self) -> String {
+        let mut headers = String::new();
+
+        for (key, value) in &self.headers {
+            headers.push_str(&format!("{}: {}\r\n", key, value));
+        }
+
+        headers
     }
 }

@@ -16,6 +16,16 @@ pub enum Version {
     HTTP2_0,
 }
 
+impl Version {
+    pub fn as_str(&self) -> &str {
+        match self {
+            Version::HTTP1_0 => "HTTP/1.0",
+            Version::HTTP1_1 => "HTTP/1.1",
+            Version::HTTP2_0 => "HTTP/2.0",
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct URI {
     pub path: String,

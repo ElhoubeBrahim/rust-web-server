@@ -1,6 +1,9 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, io::Write, net::TcpStream};
 
-use super::types::{Method, Version, URI};
+use super::{
+    response::Response,
+    types::{Method, Version, URI},
+};
 
 pub struct Request {
     method: Method,
@@ -27,12 +30,11 @@ impl Request {
         self.parse_headers(parts.collect());
     }
 
-    pub fn handle(&self) {
-        println!("Method: {:?}", self.method);
-        println!("Path: {:?}", self.uri.path);
-        println!("Params: {:?}", self.uri.params);
-        println!("Version: {:?}", self.version);
-        println!("Headers: {:?}", self.headers);
+    pub fn handle(&self, stream: &mut TcpStream) {
+        let mut response = Response::new(self);
+        let raw = response.prepare();
+
+        stream.write_all(raw.as_bytes()).unwrap();
     }
 
     fn parse_request_line(&mut self, line: &str) {
@@ -51,6 +53,17 @@ impl Request {
             let header = RequestParser::parse_header(line);
             self.headers.insert(header.0, header.1);
         }
+    }
+
+    pub fn uri(&self) -> URI {
+        URI {
+            path: self.uri.path.clone(),
+            params: self.uri.params.clone(),
+        }
+    }
+
+    pub fn version(&self) -> &Version {
+        &self.version
     }
 }
 
@@ -71,7 +84,7 @@ impl RequestParser {
         // Split the URI into its path and parameters
         let mut parts = uri.split("?");
 
-        let path = parts.next().unwrap();
+        let path = parts.next().unwrap().trim_matches('/');
         let mut params = HashMap::new();
 
         // Parse the URI parameters => ?key=value&key=value
