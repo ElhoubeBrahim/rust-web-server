@@ -1,0 +1,25 @@
+######################################
+###      Server Configuration      ###
+######################################
+
+[host]
+host = "127.0.0.1"
+port = 7878
+
+[file_system]
+root_dir = "public"
+index_file = "index.html"
+not_found = "404.html"
+server_error = "500.html"
+
+[connection]
+max_connections = 100
+
+[logs]
+access_log = "server/access.log"
+error_log = "server/error.log"
+
+[cors]
+allow_methods = ["GET", "POST", "PUT", "DELETE"]
+allow_headers = ["content-type", "authorization", "content-length"]
+allow_origins = ["*"]
