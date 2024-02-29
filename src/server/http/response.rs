@@ -1,5 +1,7 @@
 use std::{collections::HashMap, fs, io::Error};
 
+use crate::server::config::CONFIG;
+
 use super::request::Request;
 
 pub struct Response<'a> {
@@ -20,6 +22,7 @@ impl<'a> Response<'a> {
     }
 
     pub fn prepare(&mut self) -> String {
+        let config = &CONFIG;
         let path = self.request.uri().path;
         match self.get_file_content(path) {
             Ok(content) => {
@@ -27,8 +30,10 @@ impl<'a> Response<'a> {
                 self.get_raw()
             }
             Err(_) => {
+                let not_found_path = config.file_system().not_found.to_string();
+
                 self.status_code = 404;
-                self.body = self.get_file_content("404.html".to_string()).unwrap();
+                self.body = self.get_file_content(not_found_path).unwrap();
                 self.get_raw()
             }
         }
@@ -65,15 +70,19 @@ impl<'a> Response<'a> {
     }
 
     fn build_file_path(&self, path: String) -> String {
-        let mut full_path = format!("public/{}", &path).to_string();
+        let config = &CONFIG;
+        let root_dir = config.file_system().root_dir.to_string();
+        let index_file = config.file_system().index_file.to_string();
+
+        let mut full_path = format!("{}/{}", &root_dir, &path).to_string();
 
         // Check if file exists
         let metadata = fs::metadata(&full_path);
         if metadata.is_err() || metadata.unwrap().is_dir() {
             full_path = if path.is_empty() {
-                "public/index.html".to_string()
+                format!("{}/{}", &root_dir, &index_file)
             } else {
-                format!("public/{}/index.html", &path)
+                format!("{}/{}/{}", &root_dir, &index_file, &path)
             }
         }
 

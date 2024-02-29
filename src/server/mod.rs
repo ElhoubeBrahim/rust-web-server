@@ -3,8 +3,12 @@ use std::{
     net::TcpListener,
 };
 
+mod config;
 mod http;
+
 use http::request::Request;
+
+use config::CONFIG;
 
 pub struct Server {
     host: String,
@@ -14,9 +18,11 @@ pub struct Server {
 
 impl Server {
     pub fn new() -> Server {
+        let config = &CONFIG;
+
         Server {
-            host: String::from("127.0.0.1"),
-            port: 8080,
+            host: config.host().host.to_string(),
+            port: config.host().port,
             listener: None,
         }
     }
