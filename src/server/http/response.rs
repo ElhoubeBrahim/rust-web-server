@@ -82,7 +82,7 @@ impl<'a> Response<'a> {
             full_path = if path.is_empty() {
                 format!("{}/{}", &root_dir, &index_file)
             } else {
-                format!("{}/{}/{}", &root_dir, &index_file, &path)
+                format!("{}/{}/{}", &root_dir, &path, &index_file)
             }
         }
 
