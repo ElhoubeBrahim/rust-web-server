@@ -1,5 +1,5 @@
 use std::{
-    io::{BufRead, BufReader},
+    io::Read,
     net::TcpListener,
 };
 
@@ -13,6 +13,7 @@ use config::CONFIG;
 pub struct Server {
     host: String,
     port: u16,
+    buffer_size: usize,
     listener: Option<TcpListener>,
 }
 
@@ -23,6 +24,7 @@ impl Server {
         Server {
             host: config.host().host.to_string(),
             port: config.host().port,
+            buffer_size: config.connection().buffer_size,
             listener: None,
         }
     }
@@ -35,18 +37,14 @@ impl Server {
         // Listen for incoming connections
         for stream in self.listener.as_ref().unwrap().incoming() {
             // Read the incoming data
+            let mut buffer = vec![0; self.buffer_size];
             let mut stream = stream.unwrap();
-            let buffer = BufReader::new(&mut stream)
-                .lines()
-                .map(|line| line.unwrap())
-                .take_while(|line| !line.is_empty())
-                .collect::<Vec<String>>()
-                .join("\r\n")
-                .to_string();
+            stream.read(&mut buffer).unwrap();
+            let request_str = String::from_utf8_lossy(&buffer[..]).to_string();
 
             // Handle the incoming request
             let mut request = Request::new();
-            request.parse(buffer.as_str());
+            request.parse(&request_str);
             request.handle(&mut stream);
         }
     }

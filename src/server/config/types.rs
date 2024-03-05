@@ -17,6 +17,12 @@ pub struct FileSystemConfig {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct ConnectionConfig {
+  pub max_connections: usize,
+  pub buffer_size: usize,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct LogsConfig {
   pub access_log: String,
   pub error_log: String,

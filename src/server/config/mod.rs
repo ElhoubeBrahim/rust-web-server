@@ -6,10 +6,13 @@ use std::fs;
 
 use types::{CorsConfig, FileSystemConfig, HostConfig, LogsConfig};
 
+use self::types::ConnectionConfig;
+
 #[derive(Debug, Deserialize)]
 pub struct Config {
     host: HostConfig,
     file_system: FileSystemConfig,
+    connection: ConnectionConfig,
     logs: LogsConfig,
     cors: CorsConfig,
 }
@@ -30,6 +33,11 @@ impl Config {
     pub fn file_system(&self) -> &FileSystemConfig {
         &self.file_system
     }
+
+    pub fn connection(&self) -> &ConnectionConfig {
+        &self.connection
+    }
+
     pub fn logs(&self) -> &LogsConfig {
         &self.logs
     }

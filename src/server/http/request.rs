@@ -5,11 +5,13 @@ use super::{
     types::{Method, Version, URI},
 };
 
+#[derive(Debug)]
 pub struct Request {
     method: Method,
     uri: URI,
     version: Version,
     headers: HashMap<String, String>,
+    body: String,
 }
 
 impl Request {
@@ -19,15 +21,22 @@ impl Request {
             uri: URI::new(),
             version: Version::HTTP1_1,
             headers: HashMap::new(),
+            body: String::new(),
         }
     }
 
     pub fn parse(&mut self, buffer: &str) {
-        let mut parts = buffer.split("\r\n");
+        // Split the request data into its components
+        let mut request_data = buffer.split("\r\n\r\n");
 
         // Parse the request components
+        let mut parts = request_data.next().unwrap().split("\n");
         self.parse_request_line(parts.next().unwrap());
         self.parse_headers(parts.collect());
+
+        // Parse the request body
+        let body = request_data.next().unwrap_or("");
+        self.parse_body(body);
     }
 
     pub fn handle(&self, stream: &mut TcpStream) {
@@ -53,6 +62,22 @@ impl Request {
             let header = RequestParser::parse_header(line);
             self.headers.insert(header.0, header.1);
         }
+    }
+
+    fn parse_body(&mut self, body: &str) {
+        // Get the content-length header or default to 0
+        let content_length = self
+            .headers
+            .get("content-length")
+            .unwrap_or(&"0".to_string())
+            .parse::<usize>()
+            .unwrap();
+
+        // Take the first `content_length` characters as the body
+        self.body = body.to_string()
+            .chars()
+            .take(content_length)
+            .collect::<String>();
     }
 
     pub fn uri(&self) -> URI {
