@@ -39,6 +39,14 @@ impl<'a> Response<'a> {
         }
     }
 
+    pub fn status(&self) -> u16 {
+        self.status_code
+    }
+
+    pub fn body(&self) -> &str {
+        &self.body
+    }
+
     fn get_raw(&mut self) -> String {
         // Set the response headers
         self.headers

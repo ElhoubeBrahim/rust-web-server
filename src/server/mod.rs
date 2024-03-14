@@ -2,6 +2,7 @@ use std::{io::Read, net::TcpListener, thread};
 
 mod config;
 mod http;
+mod logger;
 
 use config::CONFIG;
 use http::request::Request;

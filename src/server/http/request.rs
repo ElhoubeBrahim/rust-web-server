@@ -1,4 +1,10 @@
-use std::{collections::HashMap, io::Write, net::TcpStream};
+use std::{
+    collections::HashMap,
+    io::Write,
+    net::TcpStream,
+};
+
+use crate::server::logger::access::AccessLogger;
 
 use super::{
     response::Response,
@@ -43,6 +49,17 @@ impl Request {
         let mut response = Response::new(self);
         let raw = response.prepare();
 
+        // Log the request and response
+        let message = format!(
+            "{:?} {} /{} {} {}",
+            self.method,
+            self.version.as_str(),
+            self.uri.path,
+            response.status(),
+            response.body().len(),
+        );
+        AccessLogger::log(&message);
+
         stream.write_all(raw.as_bytes()).unwrap();
     }
 
@@ -74,7 +91,8 @@ impl Request {
             .unwrap();
 
         // Take the first `content_length` characters as the body
-        self.body = body.to_string()
+        self.body = body
+            .to_string()
             .chars()
             .take(content_length)
             .collect::<String>();
