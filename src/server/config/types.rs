@@ -18,7 +18,7 @@ pub struct FileSystemConfig {
 
 #[derive(Debug, Deserialize)]
 pub struct ConnectionConfig {
-  pub max_connections: usize,
+  pub max_connections: u16,
   pub buffer_size: usize,
 }
 
