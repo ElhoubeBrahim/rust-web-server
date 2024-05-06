@@ -7,6 +7,8 @@ mod logger;
 use config::CONFIG;
 use http::request::Request;
 
+use self::logger::error::ErrorLogger;
+
 pub struct Server {
     host: String,
     port: u16,
@@ -17,8 +19,19 @@ pub struct Server {
 
 impl Server {
     pub fn new() -> Server {
-        let config = &CONFIG;
+        let config = &CONFIG.as_ref();
+        match config {
+            Some(_) => {}
+            None => {
+                ErrorLogger::log(
+                    logger::LogLevel::ERROR,
+                    "Failed to load the server configuration file.",
+                );
+                std::process::exit(1);
+            }
+        }
 
+        let config = config.unwrap();
         Server {
             host: config.host().host.to_string(),
             port: config.host().port,
@@ -42,7 +55,6 @@ impl Server {
                 break;
             }
 
-            println!("Incoming connection ...");
             let mut buffer = vec![0; self.buffer_size];
             let mut stream = stream.unwrap();
 
