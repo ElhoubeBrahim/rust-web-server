@@ -18,13 +18,29 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new() -> Config {
-        let config = fs::read_to_string("server/config.toml")
-            .expect("Failed to read the configuration file");
-        let config: Config =
-            toml::from_str(config.as_str()).expect("Failed to parse the configuration file");
+    pub fn new() -> Option<Config> {
+        // Read config file to string
+        let result = fs::read_to_string("server/config.toml");
+        match result {
+            Ok(_) => {}
+            Err(e) => {
+                return None;
+            }
+        }
+        let config = result.unwrap();
 
-        config
+        // Parse config file to Config struct
+        let result = toml::from_str(config.as_str());
+        match result {
+            Ok(_) => {}
+            Err(e) => {
+                return None;
+            }
+        }
+        let config: Config = result.unwrap();
+
+        // Return the Config struct
+        Some(config)
     }
 
     pub fn host(&self) -> &HostConfig {
@@ -47,5 +63,5 @@ impl Config {
 }
 
 lazy_static! {
-    pub static ref CONFIG: Config = Config::new();
+    pub static ref CONFIG: Option<Config> = Config::new();
 }
