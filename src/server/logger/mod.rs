@@ -1,4 +1,5 @@
 pub mod access;
+pub mod error;
 
 use std::fs::OpenOptions;
 use std::io::Write;
@@ -13,5 +14,19 @@ impl Logger {
             .expect("Failed to open the error log file.");
 
         writeln!(file, "{}", message).expect("Failed to write to the error log.");
+    }
+}
+
+pub enum LogLevel {
+    INFO,
+    WARN,
+    ERROR,
+}
+
+pub fn log_level_to_string(level: LogLevel) -> String {
+    match level {
+        LogLevel::INFO => String::from("INFO"),
+        LogLevel::WARN => String::from("WARN"),
+        LogLevel::ERROR => String::from("ERROR"),
     }
 }
