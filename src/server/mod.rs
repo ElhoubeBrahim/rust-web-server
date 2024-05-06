@@ -43,7 +43,18 @@ impl Server {
 
     pub fn run(&mut self) {
         // Start the server on the specified host and port
-        self.listener = Some(TcpListener::bind(format!("{}:{}", self.host, self.port)).unwrap());
+        let result = TcpListener::bind(format!("{}:{}", self.host, self.port));
+
+        self.listener = match result {
+            Ok(listener) => Some(listener),
+            Err(_) => {
+                ErrorLogger::log(
+                    logger::LogLevel::ERROR,
+                    format!("Failed to bind the server on \"{}:{}\". Check server configuration and port availability", self.host, self.port).as_str(),
+                );
+                std::process::exit(1);
+            }
+        };
         println!("Server is running on http://{}:{}", self.host, self.port);
 
         // Listen for incoming connections
@@ -51,7 +62,14 @@ impl Server {
         for stream in self.listener.as_ref().unwrap().incoming() {
             connections += 1;
             if connections > self.max_connections {
-                println!("Max connections reached. Closing the server ...");
+                ErrorLogger::log(
+                    logger::LogLevel::WARN,
+                    format!(
+                        "Max connections reached. {}/{}",
+                        connections, self.max_connections
+                    )
+                    .as_str(),
+                );
                 break;
             }
 
