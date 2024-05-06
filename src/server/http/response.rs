@@ -22,7 +22,7 @@ impl<'a> Response<'a> {
     }
 
     pub fn prepare(&mut self) -> String {
-        let config = &CONFIG;
+        let config = &CONFIG.as_ref().unwrap();
         let path = self.request.uri().path;
         match self.get_file_content(path) {
             Ok(content) => {
@@ -78,7 +78,7 @@ impl<'a> Response<'a> {
     }
 
     fn build_file_path(&self, path: String) -> String {
-        let config = &CONFIG;
+        let config = &CONFIG.as_ref().unwrap();
         let root_dir = config.file_system().root_dir.to_string();
         let index_file = config.file_system().index_file.to_string();
 

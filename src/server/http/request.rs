@@ -1,8 +1,4 @@
-use std::{
-    collections::HashMap,
-    io::Write,
-    net::TcpStream,
-};
+use std::{collections::HashMap, io::Write, net::TcpStream};
 
 use crate::server::logger::access::AccessLogger;
 
