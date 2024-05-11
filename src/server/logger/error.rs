@@ -19,8 +19,6 @@ impl ErrorLogger {
             None => "server/error.log",
         };
 
-        println!("Error log: {}", error_log);
-
         // Prepare the message
         let message = format!(
             "[{}] {} {} - {}",

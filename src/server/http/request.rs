@@ -1,6 +1,12 @@
-use std::{collections::HashMap, io::Write, net::TcpStream};
+use std::{
+    collections::HashMap,
+    io::{Error, Write},
+    net::TcpStream,
+};
 
-use crate::server::logger::access::AccessLogger;
+use regex::Regex;
+
+use crate::server::logger::{access::AccessLogger, error::ErrorLogger, LogLevel};
 
 use super::{
     response::Response,
@@ -27,18 +33,20 @@ impl Request {
         }
     }
 
-    pub fn parse(&mut self, buffer: &str) {
+    pub fn parse(&mut self, buffer: &str) -> Result<(), Error> {
         // Split the request data into its components
         let mut request_data = buffer.split("\r\n\r\n");
 
         // Parse the request components
         let mut parts = request_data.next().unwrap().split("\n");
-        self.parse_request_line(parts.next().unwrap());
-        self.parse_headers(parts.collect());
+        self.parse_request_line(parts.next().unwrap())?;
+        self.parse_headers(parts.collect())?;
 
         // Parse the request body
         let body = request_data.next().unwrap_or("");
         self.parse_body(body);
+
+        Ok(())
     }
 
     pub fn handle(&self, stream: &mut TcpStream) {
@@ -59,22 +67,50 @@ impl Request {
         stream.write_all(raw.as_bytes()).unwrap();
     }
 
-    fn parse_request_line(&mut self, line: &str) {
+    pub fn close(&self, status: u16, status_text: &str, stream: &mut TcpStream) {
+        let response = format!("{} {} {}", self.version.as_str(), status, status_text);
+
+        stream.write_all(response.as_bytes()).unwrap();
+    }
+
+    fn parse_request_line(&mut self, line: &str) -> Result<(), Error> {
         // Split the request line into its components
         // GET /path?query=string HTTP/1.1
         let parts = line.split_whitespace().collect::<Vec<&str>>();
+        println!("{:?}", line);
+
+        // Ensure the request line is valid
+        if parts.len() != 3 {
+            ErrorLogger::log(
+                LogLevel::ERROR,
+                format!("Invalid request line: {}", line.trim_matches('\0')).as_str(),
+            );
+            return Err(Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "Invalid request line",
+            ));
+        }
 
         // Parse the request line components
-        self.method = RequestParser::parse_method(parts[0]);
-        self.uri = RequestParser::parse_uri(parts[1]);
-        self.version = RequestParser::parse_version(parts[2]);
+        self.method = RequestParser::parse_method(parts[0])?;
+        self.uri = RequestParser::parse_uri(parts[1])?;
+        self.version = RequestParser::parse_version(parts[2])?;
+
+        Ok(())
     }
 
-    fn parse_headers(&mut self, lines: Vec<&str>) {
+    fn parse_headers(&mut self, lines: Vec<&str>) -> Result<(), Error> {
         for line in lines {
-            let header = RequestParser::parse_header(line);
+            let header = RequestParser::parse_header(line)?;
+
+            if header.0.is_empty() || header.1.is_empty() {
+                continue;
+            }
+
             self.headers.insert(header.0, header.1);
         }
+
+        Ok(())
     }
 
     fn parse_body(&mut self, body: &str) {
@@ -108,18 +144,36 @@ impl Request {
 
 pub struct RequestParser {}
 impl RequestParser {
-    pub fn parse_method(method: &str) -> Method {
-        match method {
+    pub fn parse_method(method: &str) -> Result<Method, Error> {
+        let method = match method {
             "GET" => Method::GET,
             "POST" => Method::POST,
             "PUT" => Method::PUT,
             "DELETE" => Method::DELETE,
             "OPTIONS" => Method::OPTIONS,
             _ => Method::GET,
-        }
+        };
+
+        Ok(method)
     }
 
-    pub fn parse_uri(uri: &str) -> URI {
+    pub fn parse_uri(uri: &str) -> Result<URI, Error> {
+        // Validate the URI format
+        if uri != "/"
+            && !Regex::new(r"^(\/?\w+)+(\.)?\w+(\?(\w+=[\w\d]+(&\w+=[\w\d]+)*)+){0,1}$")
+                .unwrap()
+                .is_match(uri)
+        {
+            ErrorLogger::log(
+                LogLevel::ERROR,
+                format!("Invalid URI format: {}", uri).as_str(),
+            );
+            return Err(Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "Invalid URI format",
+            ));
+        }
+
         // Split the URI into its path and parameters
         let mut parts = uri.split("?");
 
@@ -141,22 +195,24 @@ impl RequestParser {
         });
 
         // Return the parsed URI
-        URI {
+        Ok(URI {
             path: path.to_string(),
             params,
-        }
+        })
     }
 
-    pub fn parse_version(version: &str) -> Version {
-        match version {
+    pub fn parse_version(version: &str) -> Result<Version, Error> {
+        let version = match version {
             "HTTP/1.0" => Version::HTTP1_0,
             "HTTP/1.1" => Version::HTTP1_1,
             "HTTP/2.0" => Version::HTTP2_0,
             _ => Version::HTTP1_1,
-        }
+        };
+
+        Ok(version)
     }
 
-    pub fn parse_header(header: &str) -> (String, String) {
+    pub fn parse_header(header: &str) -> Result<(String, String), Error> {
         // Split the header into its key and value
         let mut parts = header.split(": ");
 
@@ -165,6 +221,6 @@ impl RequestParser {
         let value = parts.next().unwrap_or("");
 
         // Return the parsed header
-        (key.to_string(), value.to_string())
+        Ok((key.to_string(), value.to_string()))
     }
 }

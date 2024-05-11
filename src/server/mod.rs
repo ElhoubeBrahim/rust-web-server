@@ -83,8 +83,20 @@ impl Server {
 
                 // Handle the incoming request
                 let mut request = Request::new();
-                request.parse(&request_str);
-                request.handle(&mut stream);
+                let result = request.parse(&request_str);
+
+                match result {
+                    Ok(_) => {
+                        request.handle(&mut stream);
+                    }
+                    Err(_) => {
+                        ErrorLogger::log(
+                            logger::LogLevel::ERROR,
+                            "Failed to parse the incoming request.",
+                        );
+                        request.close(400, "Bad Request", &mut stream)
+                    }
+                }
             });
         }
     }
